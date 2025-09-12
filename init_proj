@@ -1,0 +1,95 @@
+echo "Please enter proj name"
+read name
+
+if [ -z "$name" ];then
+	echo "can not be empty"
+	exit 1
+fi
+
+if [ -d "$name" ]; then
+	echo "dir '$name' has been existed."
+	exit 1
+fi
+
+mkdir "$name" || exit 1
+cd "$name" || exit 1
+mkdir include
+mkdir src
+mkdir .vscode
+mkdir build
+touch CMakeLists.txt
+
+cat > CMakeLists.txt << EOF
+cmake_minimum_required(VERSION 3.10)
+project($name)
+
+set(CMAKE_CXX_STANDARD 20)
+file(GLOB SOURCES "src/*.cpp")
+include_directories(include)
+add_executable(\${PROJECT_NAME} \${SOURCES})
+target_compile_options(\${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic -Werror)
+set(SANITIZER -fsanitize=address,undefined -fno-omit-frame-pointer)
+target_compile_options(${PROJECT_NAME} PRIVATE ${SANITIZER})
+target_link_options(${PROJECT_NAME} PRIVATE ${SANITIZER})
+EOF
+
+cat > src/main.cpp << EOF
+#include <iostream>
+
+int main(){
+	std::cout<< "Hello,$name!" << std::endl;
+	return 0;
+}
+EOF
+
+cat > .vscode/launch.json << EOF
+{
+    "version": "0.2.0",
+    "configurations": [
+
+        {
+            "name": "C++ Debug",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "\${workspaceFolder}/build/$name",
+            "args": [],
+            "cwd": "\${workspaceFolder}",
+            "stopAtEntry": false,
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "cmake"
+        }
+    ]
+}
+EOF
+
+cat > .vscode/tasks.json << EOF
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "cmake",
+            "type": "shell",
+            "command": "cmake --build build -- -j4",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": ["$gcc"],
+            "detail": "My personal task configuration"
+        }
+    ]
+}
+EOF
+cat > format.sh << EOF
+clang-format -i src/*.cpp include/*.hpp 
+EOF
+chmod +x format.sh
