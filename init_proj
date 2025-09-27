@@ -93,3 +93,17 @@ cat > format.sh << EOF
 clang-format -i src/*.cpp include/*.hpp 
 EOF
 chmod +x format.sh
+
+cat > test.sh << EOF
+current_dir=$(cd $(dirname $0); pwd)
+cd $current_dir/build
+cmake ..
+make
+if [ "$1" = "time" ];
+then
+    time ./$name
+else
+    ./$name
+fi
+cd $current_dir
+EOF
